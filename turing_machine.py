@@ -167,8 +167,10 @@ class Tape:
 	tape[0] == 1
 	tape[1:3] == '23'
 	tape[5] == 'B'    'B'指的是可设置的空白符
-	tape[-1:6] == 'B12345B'
-	tape[:3] == '123'
+	tape[-1:6] == 'B12345B''
+	
+	Error:
+	! tape[:3] == '123'     None在无限长纸带上切片是不需要的  start 的 None 可用 0 替代  stop 的 None 是没有意义的，因为纸带向右无限延伸
 	
 	另外，不像str那样不支持 item assignment
 	Tape 支持此类操作，但限制替换字符只有一位
@@ -192,33 +194,21 @@ class Tape:
 
 	def __getitem__(self, item):
 		if isinstance(item, slice):
-			#legal for str slice
-			if (not item.start or 0 <= item.start < len(self.string)) and \
-					(not item.stop or 0 <= item.stop <= len(self.string) ):
-				return self.string[item]
-
-
-			# item.start <= item.stop
 			if item.start > item.stop:
 				raise IndexError(
 					'start should be less than stop, but' + str(item.start) + ' is greater than ' + str(item.stop))
 
-			if 0 <= item.start < len(self.string):
-				end = min(item.stop, len(self.string))
-				return self.string[item.start:end] + 'B'*(item.stop-end)
-
-
-
-			'''
+			middle = (max(0, item.start), max(0, min(item.stop, len(self.string) ) ) )
+			front = back = 0
 			if item.start < 0:
-				begin = 0
-			elif 0 <= item.start < len(self.string):
-				begin = item.start
-			else:
-				begin = None
-			if item.stop <= 0:
-				end = None
-			'''
+				front = min(0, item.stop) - item.start
+			if item.stop > len(self.string):
+				back = item.stop - max(len(self.string), item.start)
+			return 'B'*front + self.string[middle[0]:middle[1]] + 'B'*back
+
+		if 0 <= item < len(self.string):
+			return self.string[item]
+		return 'B'
 
 	def __setitem__(self, key, value):
 		if not isinstance(key, int):
@@ -259,10 +249,10 @@ class TapeTest(unittest.TestCase):
 		self.assertEqual(tape[4], '5')
 		self.assertEqual(tape[-1], 'B')
 		self.assertEqual(tape[10], 'B')
-		self.assertEqual(tape[:3], '123')
 		self.assertEqual(tape[-1:3], 'B123')
 		self.assertEqual(tape[3:6], '45B')
 		self.assertEqual(tape[-1:6], 'B12345B')
+		self.assertEqual(tape[-5:-3],'BB')
 
 	def test_item_assignment(self):
 		tape = Tape('12345')
@@ -275,6 +265,7 @@ class TapeTest(unittest.TestCase):
 
 
 
+		
 class MachineTest(unittest.TestCase):
 	def setUp(self):
 		# 该自动机要求输入带包含3个以上1
