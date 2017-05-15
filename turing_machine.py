@@ -5,7 +5,7 @@ class TuringMachine:
 
 
 	def __init__(self, states:set, start_state:str, terminating_states:set, transforming_funcs_string:str,
-	             blank_symbol:set='B', tape_symbols:set=None, input_letters:set=None, tape:str=None):
+				 blank_symbol:set='B', tape_symbols:set=None, input_letters:set=None, tape:str=None):
 		self.states = states
 		self.start_state = start_state
 		self.terminate_states = terminating_states
@@ -159,9 +159,85 @@ class TuringMachine:
 
 
 class Tape:
-	def __init__(self, string:str):
+	"""
+	Tape 模拟无限长纸带
+	
+	输入‘12345’
+	tape = Tape('12345')
+	tape[0] == 1
+	tape[1:3] == '23'
+	tape[5] == 'B'    'B'指的是可设置的空白符
+	tape[-1:6] == 'B12345B'
+	tape[:3] == '123'
+	
+	另外，不像str那样不支持 item assignment
+	Tape 支持此类操作，但限制替换字符只有一位
+	tape[0] = '0' -> tape == '02345'
+	
+	Error:
+	tape[0] = '00' 
+	
+	甚至 隐式地增长 长度，增长的部分用空白符 'B' 代替
+	tape[10] = 'A' -> tape == '12345BBBBBA'
+	
+	
+	"""
+	# TODO tape[0:5] = 'abcde'  复制操作以后再说
+	def __init__(self, string:str, blank_symbol='B'):
 		self.string = string
-		self.length = len(string)
+		self.blank_symbol = blank_symbol
+
+	def __len__(self):
+		return '∞'
+
+	def __getitem__(self, item):
+		if isinstance(item, slice):
+			#legal for str slice
+			if (not item.start or 0 <= item.start < len(self.string)) and \
+					(not item.stop or 0 <= item.stop <= len(self.string) ):
+				return self.string[item]
+
+
+			# item.start <= item.stop
+			if item.start > item.stop:
+				raise IndexError(
+					'start should be less than stop, but' + str(item.start) + ' is greater than ' + str(item.stop))
+
+			if 0 <= item.start < len(self.string):
+				end = min(item.stop, len(self.string))
+				return self.string[item.start:end] + 'B'*(item.stop-end)
+
+
+
+			'''
+			if item.start < 0:
+				begin = 0
+			elif 0 <= item.start < len(self.string):
+				begin = item.start
+			else:
+				begin = None
+			if item.stop <= 0:
+				end = None
+			'''
+
+	def __setitem__(self, key, value):
+		if not isinstance(key, int):
+			raise TypeError('the type of key is supposed to be int, not'+key.__class__)
+		if not isinstance(value, str) and len(value) != 1:
+			raise TypeError('the type of value is supposed to be str and the length is supposed to be 1, not '+str(value))
+		if key < 0 :
+			raise TypeError('key should be > 0, not '+str(key))
+		if 0 <= key < len(self.string):
+			l = list(self.string)
+			l[key] = value
+			self.string = ''.join(l)
+			return
+		# key >= length
+		l = list(self.string)
+		l.extend('B'*(key-len(self.string)+1))
+		l[key] = value
+		self.string = ''.join(l)
+
 
 
 
@@ -174,6 +250,29 @@ class HaltException(Exception):
 	pass
 
 import unittest
+
+
+class TapeTest(unittest.TestCase):
+	def test_item_get(self):
+		tape = Tape('12345')
+		self.assertEqual(tape[0], '1')
+		self.assertEqual(tape[4], '5')
+		self.assertEqual(tape[-1], 'B')
+		self.assertEqual(tape[10], 'B')
+		self.assertEqual(tape[:3], '123')
+		self.assertEqual(tape[-1:3], 'B123')
+		self.assertEqual(tape[3:6], '45B')
+		self.assertEqual(tape[-1:6], 'B12345B')
+
+	def test_item_assignment(self):
+		tape = Tape('12345')
+		tape[0] = '0'
+		self.assertEqual(tape.string,'02345')
+		tape[5] = 'B'
+		self.assertEqual(tape.string, '02345B')
+		tape[10] = '#'
+		self.assertEqual(tape.string, '02345BBBBB#')
+
 
 
 class MachineTest(unittest.TestCase):
@@ -212,7 +311,6 @@ class MachineTest(unittest.TestCase):
 		except ConstructionError:
 			# 自动机不应该接受 ‘121’这个纸带输入
 			self.assertEqual(self.tm.tape, tape)
-
 
 	def test_turing_machine_functionality(self):
 		self.assertTrue(self.tm.run())
