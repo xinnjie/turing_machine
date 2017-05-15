@@ -52,7 +52,7 @@ class TuringMachine:
 			for letter in value:
 				tape_symbols.add(letter)
 				self.tape_symbols = tape_symbols
-		self._tape = value
+		self._tape = Tape(value)
 
 	@property
 	def tape_symbols(self):
@@ -115,7 +115,10 @@ class TuringMachine:
 			raise HaltException
 		read_letter = tape[self.position]
 		# tuple(starte_state, read_letter) -> tuple(to_state, write_letter, direction)
-		next_step = self.transform_funcs[(self.current_state ,read_letter)]
+		try:
+			next_step = self.transform_funcs[(self.current_state ,read_letter)]
+		except KeyError:
+			raise BreakDownException('func')
 		self.current_state, tape[self.position], direction= next_step
 		self.position = self.position + self.__class__.direction[direction]
 
@@ -130,7 +133,6 @@ class TuringMachine:
 			pass
 		return process
 
-
 	def run(self) -> bool:
 		try:
 			for _ in range(1000):
@@ -140,20 +142,6 @@ class TuringMachine:
 
 		return False
 
-
-'''
-	@property
-	def start_state(self):
-		return self._start_state
-
-	@start_state.setter
-	def start_start(self, value):
-		if value in self.states:
-			self._start_state = value
-			return
-		raise ConstructionError("start state must be in states")
-
-'''
 
 
 
@@ -239,6 +227,9 @@ class ConstructionError(Exception):
 class HaltException(Exception):
 	pass
 
+class BreakDownException(Exception):
+	pass
+
 import unittest
 
 
@@ -289,20 +280,20 @@ class MachineTest(unittest.TestCase):
 
 	def test_transform_funcs(self):
 		funcs = self.tm.transform_funcs
-		print(funcs)
 		self.assertIsNotNone(funcs)
 
 	def test_tape(self):
 		tape = '11001101'
 		self.tm.tape = tape
-		self.assertEqual(self.tm.tape, tape)
+		self.assertEqual(self.tm.tape.string, tape)
 		# illegal tape input
 		try:
 			self.tm.tape = '121'
 		except ConstructionError:
 			# 自动机不应该接受 ‘121’这个纸带输入
-			self.assertEqual(self.tm.tape, tape)
+			self.assertEqual(self.tm.tape.string, tape)
 
 	def test_turing_machine_functionality(self):
+		self.tm.tape = '11001101'
 		self.assertTrue(self.tm.run())
 
