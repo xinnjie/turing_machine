@@ -122,13 +122,20 @@ class TuringMachine:
 		self.current_state, tape[self.position], direction= next_step
 		self.position = self.position + self.__class__.direction[direction]
 
+
 	def step_forward(self, steps=1) -> list:
+		"""
+		
+		:param steps: the steps you want to run
+		:return: list of string, the string represent the tape
+		"""
 		import copy
 		process = []
 		try:
 			for _ in range(steps):
 				self._step_forward()
-				process.append(copy.deepcopy(self.tape))
+				process.append((copy.deepcopy(self.tape), self.position))
+				# 需要添加当前读写头位置信息
 		except HaltException:
 			pass
 		return process
@@ -216,7 +223,8 @@ class Tape:
 		l[key] = value
 		self.string = ''.join(l)
 
-
+	def __str__(self):
+		return self.string.__str__()
 
 
 
@@ -297,3 +305,8 @@ class MachineTest(unittest.TestCase):
 		self.tm.tape = '11001101'
 		self.assertTrue(self.tm.run())
 
+	def test_step_forwards(self):
+		self.tm.tape = '11001101'
+		rs = self.tm.step_forward(5)
+		for tape in rs:
+			print(tape)
