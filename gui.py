@@ -1,7 +1,9 @@
-from flask import Flask, render_template
-from turing_machine import TuringMachine, Tape
+from flask import Flask, render_template, request, flash, redirect
+from turing_machine import TuringMachine, Tape, TMConstructionError
+from wtforms import Form, StringField
 
 app = Flask(__name__)
+app.secret_key = 'hello'
 
 # 由于这个应用作为一个演示图灵机的工具，并没有并发的需求，所以我在这里使用了指向一个图灵机的全局变量
 # tm初始是演示用图灵机，把纸带上的所以0改成1
@@ -13,7 +15,7 @@ states = {'q0', 'q1'}
 start_state = 'q0'
 termin_states = {'q1'}
 
-tm = TuringMachine(states, start_state, termin_states, trans_funcs, tape='0010101')
+tm = TuringMachine('modify all 0 to 1', states, start_state, termin_states, trans_funcs, tape='0010101')
 
 g = 0
 
@@ -24,12 +26,41 @@ def hello_world():
 	return 'Hello World!' + str(g)
 
 
-@app.route('/tm')
+@app.route('/tm', methods=['GET', 'POST'])
 def tm_gui():
-	global tm
-	tape_html = tape2html(*tm.current_tape_pos)
-	tm.step_forward()
-	return render_template('tm.html', tape_html=tape_html)
+	# todo 目标，表格信息填写与图灵机运行分离，可运行多个图灵机
+	form = TMForm(request.form)
+	if request.method == 'GET':
+		global tm
+		tape_html = tape2html(*tm.current_tape_pos)
+		tm.step_forward()
+		return render_template('tm.html', tape_html=tape_html, form=form)
+	if request.method == 'POST':
+		description = form.description.data
+		states = form.states.data.translate(str.maketrans({'\n':'', '\t':'', ' ':''}))
+		states = set(states.split(','))
+		try:
+			states.remove('')
+		except:
+			pass
+		termin_states = form.terminating_states.data.translate(str.maketrans({'\n':'', '\t':'', ' ':''}))
+		termin_states = set(termin_states.split(','))
+		try:
+			termin_states.remove('')
+		except:
+			pass
+		start_state = form.start_state.data
+		trans_funcs = form.trans_funcs.data
+		blank_symbol = form.blank_symbol.data
+		tape_symbols = form.tape_symbols.data
+		tape = form.tape.data
+		try:
+			tm = TuringMachine(description, states, start_state, termin_states, trans_funcs, tape=tape)
+		except TMConstructionError as e:
+			flash('fail to construct the given turing machine, because: '+ str(e))
+			return redirect('/tm')
+		flash('succeed to construct the given turing machine and switch')
+		return redirect('/tm')
 
 
 def tape2html(tape: Tape, pos: int):
@@ -42,6 +73,19 @@ def tape2html(tape: Tape, pos: int):
 			html_list.append('<td>{}</td>'.format(letter))
 		i += 1
 	return '<table class="tape"> {} </table>'.format(''.join(html_list))
+
+
+class TMForm(Form):
+	description = StringField('Description', default='modify all 1s to 0')
+	states = StringField('Allowable States', default='q0, q1')
+	terminating_states = StringField('Terminating States', default='q1')
+	start_state = StringField('Start State', default='q0')
+	trans_funcs = StringField('Transforming Functions',
+	                          default='f(q0, 1) = (q0, 0, R); f(q0, 0) = (q0, 0, R); f(q0, B) = (q1, B, S)')
+	blank_symbol = StringField('Blank Symbol', default='B')
+	tape_symbols = StringField('Tape Symbols', default='0,1')
+	# input_letters = StringField('')
+	tape = StringField('Tape', default='111010101101101')
 
 if __name__ == '__main__':
 	app.run(debug=True)

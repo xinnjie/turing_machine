@@ -1,6 +1,14 @@
 {% extends "base.html" %}
+{% from "_formhelpers.html" import render_tmform %}
+
 {% block content %}
+
     <div>
+        {{ render_tmform(form) }}
+    </div>
+
+    <div>
+        <h5>The Tape</h5>
         {{ tape_html | safe}}
     </div>
 

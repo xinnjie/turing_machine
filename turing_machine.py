@@ -1,22 +1,9 @@
 import re
 
+
 class TuringMachine:
-	direction = {'R':1, 'r':1, 'S':0, 's':0, 'L':-1, 'l':-1}
-
-
-	def __init__(self, states:set, start_state:str, terminating_states:set, transforming_funcs_string:str,
-				 blank_symbol:set='B', tape_symbols:set=None, input_letters:set=None, tape:str=None):
-		self.states = states
-		self.start_state = start_state
-		self.terminate_states = terminating_states
-		self.transform_funcs_raw_string = transforming_funcs_string
-		self.blank_symbol = blank_symbol
-		self.tape_symbols = tape_symbols
-		self.input_letters = input_letters
-		self.tape = tape
-		self.current_state = start_state
-
-		self.func_pattern = re.compile(r"""(?P<func>\w+)
+	direction = {'R': 1, 'r': 1, 'S': 0, 's': 0, 'L': -1, 'l': -1}
+	default_func_pattern = re.compile(r"""(?P<func>\w+)
 										\(
 										(?P<start_state>\w+)
 										,
@@ -30,6 +17,22 @@ class TuringMachine:
 										,
 										(?P<direction>[RrLlSs])
 										\)""", re.VERBOSE)
+
+	def __init__(self, description, states: set, start_state: str, terminating_states: set,
+	             transforming_funcs_string: str,
+	             blank_symbol: str = 'B', tape_symbols: set = None, input_letters: set = None, tape: str = None):
+		self.description = description
+		self.states = states
+		self.start_state = start_state
+		self.terminate_states = terminating_states
+		self.transform_funcs_raw_string = transforming_funcs_string
+		self.blank_symbol = blank_symbol
+		self.tape_symbols = tape_symbols
+		self.input_letters = input_letters
+		self.tape = tape
+		self.current_state = start_state
+
+		self.func_pattern = self.__class__.default_func_pattern
 
 	@property
 	def current_tape_pos(self):
@@ -50,7 +53,7 @@ class TuringMachine:
 		if self.tape_symbols:
 			for letter in value:
 				if letter not in self.tape_symbols:
-					raise ConstructionError('illegal input tape ' + letter + ' not allowed')
+					raise TMConstructionError('illegal input tape ' + letter + ' not allowed')
 		else:
 			tape_symbols = set()
 			for letter in value:
@@ -80,28 +83,27 @@ class TuringMachine:
 
 	@position.setter
 	def position(self, value: int):
-		if value < 0:   # todo 为方便起见，有可能到达-1，指向的字母是 空，这里再做打算
-			raise IndexError("position index out of range, position can not be "+str(value))
+		if value < 0:  # todo 为方便起见，有可能到达-1，指向的字母是 空，这里再做打算
+			raise IndexError("position index out of range, position can not be " + str(value))
 		self._position = value
 
-
-	def generate_transforming_funcs(self, funcs:str):
+	def generate_transforming_funcs(self, funcs: str):
 		# 去掉空格
 		funcs = self.clean_func_str(funcs)
 		transform_funcs = {}
 		for func_string in funcs:
 			res = self.func_pattern.match(func_string)
 			if res is None:
-				raise ConstructionError('transforming func does not match the right format: ' + repr(func_string))
+				raise TMConstructionError('transforming func does not match the right format: ' + repr(func_string))
 			argument = (res.group('start_state'), res.group('read_letter'))
 			return_value = (res.group('to_state'), res.group('write_letter'), res.group('direction'))
 			# 每个状态转移函数形式为  tuple(starte_state, read_letter) -> tuple(to_state, write_letter, direction)
-			transform_funcs[argument] = return_value   # todo 做检查
+			transform_funcs[argument] = return_value  # todo 做检查
 		return transform_funcs
 
 	@classmethod
-	def clean_func_str(cls, funcs_str:str) -> list:
-		after_clean = funcs_str.translate(str.maketrans({'\t':'', '\n':'', ' ':''}))   # 删去多余的空白符
+	def clean_func_str(cls, funcs_str: str) -> list:
+		after_clean = funcs_str.translate(str.maketrans({'\t': '', '\n': '', ' ': ''}))  # 删去多余的空白符
 		res = after_clean.split(';')
 		try:
 			res.remove('')
@@ -125,12 +127,11 @@ class TuringMachine:
 		read_letter = tape[self.position]
 		# tuple(starte_state, read_letter) -> tuple(to_state, write_letter, direction)
 		try:
-			next_step = self.transform_funcs[(self.current_state ,read_letter)]
+			next_step = self.transform_funcs[(self.current_state, read_letter)]
 		except KeyError:
 			raise BreakDownException('func')
-		self.current_state, tape[self.position], direction= next_step
+		self.current_state, tape[self.position], direction = next_step
 		self.position = self.position + self.__class__.direction[direction]
-
 
 	def step_forward(self, steps=1) -> list:
 		"""
@@ -144,7 +145,7 @@ class TuringMachine:
 			for _ in range(steps):
 				self._step_forward()
 				process.append((copy.deepcopy(self.tape), self.position))
-				# 需要添加当前读写头位置信息
+			# 需要添加当前读写头位置信息
 		except HaltException:
 			pass
 		if len(process) == 0:
@@ -162,9 +163,6 @@ class TuringMachine:
 			return True
 
 		return False
-
-
-
 
 
 class Tape:
@@ -193,8 +191,9 @@ class Tape:
 	
 	
 	"""
+
 	# TODO tape[0:5] = 'abcde'  复制操作以后再说
-	def __init__(self, string:str, blank_symbol='B'):
+	def __init__(self, string: str, blank_symbol='B'):
 		self.string = string
 		self.blank_symbol = blank_symbol
 
@@ -207,13 +206,13 @@ class Tape:
 				raise IndexError(
 					'start should be less than stop, but' + str(item.start) + ' is greater than ' + str(item.stop))
 
-			middle = (max(0, item.start), max(0, min(item.stop, len(self.string) ) ) )
+			middle = (max(0, item.start), max(0, min(item.stop, len(self.string))))
 			front = back = 0
 			if item.start < 0:
 				front = min(0, item.stop) - item.start
 			if item.stop > len(self.string):
 				back = item.stop - max(len(self.string), item.start)
-			return 'B'*front + self.string[middle[0]:middle[1]] + 'B'*back
+			return 'B' * front + self.string[middle[0]:middle[1]] + 'B' * back
 
 		if 0 <= item < len(self.string):
 			return self.string[item]
@@ -221,11 +220,12 @@ class Tape:
 
 	def __setitem__(self, key, value):
 		if not isinstance(key, int):
-			raise TypeError('the type of key is supposed to be int, not'+key.__class__)
+			raise TypeError('the type of key is supposed to be int, not' + key.__class__)
 		if not isinstance(value, str) and len(value) != 1:
-			raise TypeError('the type of value is supposed to be str and the length is supposed to be 1, not '+str(value))
-		if key < 0 :
-			raise TypeError('key should be > 0, not '+str(key))
+			raise TypeError(
+				'the type of value is supposed to be str and the length is supposed to be 1, not ' + str(value))
+		if key < 0:
+			raise TypeError('key should be > 0, not ' + str(key))
 		if 0 <= key < len(self.string):
 			l = list(self.string)
 			l[key] = value
@@ -233,7 +233,7 @@ class Tape:
 			return
 		# key >= length
 		l = list(self.string)
-		l.extend('B'*(key-len(self.string)+1))
+		l.extend('B' * (key - len(self.string) + 1))
 		l[key] = value
 		self.string = ''.join(l)
 
@@ -241,16 +241,17 @@ class Tape:
 		return self.string.__str__()
 
 
-
-class ConstructionError(Exception):
+class TMConstructionError(Exception):
 	pass
 
 
 class HaltException(Exception):
 	pass
 
+
 class BreakDownException(Exception):
 	pass
+
 
 import unittest
 
@@ -265,20 +266,18 @@ class TapeTest(unittest.TestCase):
 		self.assertEqual(tape[-1:3], 'B123')
 		self.assertEqual(tape[3:6], '45B')
 		self.assertEqual(tape[-1:6], 'B12345B')
-		self.assertEqual(tape[-5:-3],'BB')
+		self.assertEqual(tape[-5:-3], 'BB')
 
 	def test_item_assignment(self):
 		tape = Tape('12345')
 		tape[0] = '0'
-		self.assertEqual(tape.string,'02345')
+		self.assertEqual(tape.string, '02345')
 		tape[5] = 'B'
 		self.assertEqual(tape.string, '02345B')
 		tape[10] = '#'
 		self.assertEqual(tape.string, '02345BBBBB#')
 
 
-
-		
 class MachineTest(unittest.TestCase):
 	def setUp(self):
 		# 该自动机要求输入带包含3个以上1
@@ -292,7 +291,7 @@ class MachineTest(unittest.TestCase):
 						 f(q2, 0) = (q2, 0, R);
 						 f(q2, 1) = (q3, 1, R)'''
 
-		self.tm = TuringMachine(states, start_state, ter_states, trans_funcs)
+		self.tm = TuringMachine('match three 1s or more', states, start_state, ter_states, trans_funcs)
 
 	def test_match_function(self):  # matching functionality
 		result = self.tm.func_pattern.match('f(q0,0)=(q0,0,R)')
@@ -311,7 +310,7 @@ class MachineTest(unittest.TestCase):
 		# illegal tape input
 		try:
 			self.tm.tape = '121'
-		except ConstructionError:
+		except TMConstructionError:
 			# 自动机不应该接受 ‘121’这个纸带输入
 			self.assertEqual(self.tm.tape.string, tape)
 
