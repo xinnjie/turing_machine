@@ -2,6 +2,11 @@
     height: 60px;
 }
 
+.tape {
+    border-spacing: 1px;
+    border-collapse: separate;
+}
+
 .tape td {
     /*tape中普通单元的样式*/
     width: 60px;

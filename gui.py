@@ -57,9 +57,9 @@ def tm_gui():
 		try:
 			tm = TuringMachine(description, states, start_state, termin_states, trans_funcs, tape=tape)
 		except TMConstructionError as e:
-			flash('fail to construct the given turing machine, because: '+ str(e))
+			flash('fail to construct the given turing machine, because: '+ str(e), 'error')
 			return redirect('/tm')
-		flash('succeed to construct the given turing machine and switch')
+		flash('succeed to construct the given turing machine and switch', 'info')
 		return redirect('/tm')
 
 
