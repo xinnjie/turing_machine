@@ -32,6 +32,10 @@ class TuringMachine:
 										\)""", re.VERBOSE)
 
 	@property
+	def current_tape_pos(self):
+		return (self.tape, self.position)
+
+	@property
 	def tape(self):
 		try:
 			return self._tape
@@ -98,7 +102,12 @@ class TuringMachine:
 	@classmethod
 	def clean_func_str(cls, funcs_str:str) -> list:
 		after_clean = funcs_str.translate(str.maketrans({'\t':'', '\n':'', ' ':''}))   # 删去多余的空白符
-		return after_clean.split(';')
+		res = after_clean.split(';')
+		try:
+			res.remove('')
+		except ValueError:
+			pass
+		return res
 
 	@property
 	def transform_funcs(self) -> dict:
@@ -138,6 +147,11 @@ class TuringMachine:
 				# 需要添加当前读写头位置信息
 		except HaltException:
 			pass
+		if len(process) == 0:
+			process = [(self.tape, self.position)]
+
+		if steps == 1:
+			return process[0]
 		return process
 
 	def run(self) -> bool:

@@ -1,0 +1,15 @@
+.tape tr {
+    height: 60px;
+}
+
+.tape td {
+    /*tape中普通单元的样式*/
+    width: 60px;
+    text-align: center;
+    background: aliceblue;
+}
+
+.tape .current_pos {
+    background: lightpink;
+}
+
