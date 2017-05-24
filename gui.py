@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, flash, redirect
-from turing_machine import TuringMachine, Tape, TMConstructionError
 from wtforms import Form, StringField
+
+from turing_machine import TuringMachine, Tape, TMConstructionError
 
 app = Flask(__name__)
 app.secret_key = 'hello'
@@ -53,14 +54,18 @@ def tm_gui():
 		trans_funcs = form.trans_funcs.data
 		blank_symbol = form.blank_symbol.data
 		tape_symbols = form.tape_symbols.data
+		# 目前不使用blank_symbol和tape_symbol
 		tape = form.tape.data
+		app.logger.info("trans_funcs is " + str(trans_funcs) )
 		try:
 			tm = TuringMachine(description, states, start_state, termin_states, trans_funcs, tape=tape)
 		except TMConstructionError as e:
 			flash('fail to construct the given turing machine, because: '+ str(e), 'error')
+			app.logger.error("trans_funcs may not be legal: " + trans_funcs)
 			return redirect('/tm')
 		flash('succeed to construct the given turing machine and switch', 'info')
 		return redirect('/tm')
+	# todo 表格一直显示默认值
 
 
 def tape2html(tape: Tape, pos: int):

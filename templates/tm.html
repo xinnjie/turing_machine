@@ -2,11 +2,6 @@
 {% from "_formhelpers.html" import render_tmform %}
 
 {% block content %}
-
-    <div>
-        {{ render_tmform(form) }}
-    </div>
-
     <div>
         <h5>The Tape</h5>
         {{ tape_html | safe}}
@@ -17,6 +12,14 @@
             <button class="btn btn-default" type="submit">Step Forward</button>
         </form>
     </div>
+
+
+    <div>
+        {{ render_tmform(form) }}
+    </div>
+
+
+
 
 
 

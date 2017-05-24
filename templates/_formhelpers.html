@@ -1,7 +1,11 @@
-{% macro render_field(field) %}
-<div class="input-group">
-  <span class="input-group-addon" id="basic-addon1">{{ field.label }}</span>
-  <input type="text" class="form-control" value="{{ field.default }}">
+{% macro render_field_text(field) %}
+<div class="form-group">
+    <div class="col-sm-1">
+        {{ field.label }}
+    </div>
+    <div class="col-sm-6">
+        <input type="text" class="form-control" id="{{ field.id }}" placeholder="{{ field.default }}">
+    </div>
   {% if field.errors %}
     <ul class="errors">
     {% for error in field.errors %}
@@ -12,19 +16,37 @@
 </div>
 {% endmacro %}
 
+{% macro render_field_textarea(field) %}
+<div class="form-group">
+    <div class="col-sm-1">
+        {{ field.label }}
+    </div>
+    <div class="col-sm-6">
+        <textarea rows="5" class="form-control" id="{{ field.id }}" placeholder="{{ field.default }}"></textarea>
+    </div>
+  {% if field.errors %}
+    <ul class="errors">
+    {% for error in field.errors %}
+      <li>{{ error }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+
 {% macro render_tmform(tmform) %}
-<form method="post" action="/tm">
-    <dl>
-        {{ render_field(tmform.description) }}
-	    {{ render_field(tmform.states) }}
-	    {{ render_field(tmform.terminating_states) }}
-        {{ render_field(tmform.start_state) }}
-	    {{ render_field(tmform.trans_funcs) }}
-	    {{ render_field(tmform.blank_symbol) }}
-	    {{ render_field(tmform.tape_symbols) }}
+<form class="form-horizontal" role="form" method="post" action="/tm">
+        {{ render_field_text(tmform.description) }}
+	    {{ render_field_text(tmform.states) }}
+	    {{ render_field_text(tmform.terminating_states) }}
+        {{ render_field_text(tmform.start_state) }}
+	    {{ render_field_text(tmform.blank_symbol) }}
+	    {{ render_field_text(tmform.tape_symbols) }}
 	    <!--input_letters-->
-	    {{  render_field(tmform.tape) }}
-    </dl>
+	    {{  render_field_text(tmform.tape) }}
+        {{ render_field_textarea(tmform.trans_funcs) }}
     <p><button class="btn btn-default" type="submit">Rebuild TM</button></p>
 </form>
 {% endmacro %}
