@@ -3,8 +3,11 @@ from wtforms import Form, StringField, TextAreaField, validators
 
 from turing_machine import TuringMachine, Tape, TMConstructionError, HaltException, BreakDownException
 
+# app config
 app = Flask(__name__)
 app.secret_key = 'hello'
+ALLOWED_EXTENSIONS = {'txt'}
+
 
 # 由于这个应用作为一个演示图灵机的工具，并没有并发的需求，所以我在这里使用了指向一个图灵机的全局变量
 # tm初始是演示用图灵机，把纸带上的所以0改成1
@@ -37,26 +40,44 @@ def tm_gui():
 			flash('next transforming func not exist', 'Error')
 		return render_template('tm.html', tape_html=tape_html, form=form, next_trans_func=next_trans_func, current_tm=tm)
 	if request.method == 'POST':
-		description = form.description.data
-		states = form.states.data.translate(str.maketrans({'\n':'', '\t':'', ' ':''}))
+		if 'new_tm' in request.files:
+			file = request.files['new_tm']
+			# upload empty file
+			if file.filename == '':
+				flash('the file is empty', 'Error')
+				return redirect('/')
+			if file and allowed_file(file.filename):
+				try:
+					description, states, start_state, termin_states, trans_funcs, tape = file.read().decode().splitlines()[0:6]
+				except IndexError as e:
+					app.logger.error(str(e))
+					flash('the uploaded TM do not fit', 'Error')
+					return redirect('/')
+		# if there is no file uploaded, then check the form
+		else:
+			description = form.description.data
+			states = form.states.data
+			termin_states = form.terminating_states.data
+			start_state = form.start_state.data
+			trans_funcs = form.trans_funcs.data
+			blank_symbol = form.blank_symbol.data
+			tape_symbols = form.tape_symbols.data
+			tape = form.tape.data
+
+		states = states.translate(str.maketrans({'\n':'', '\t':'', ' ':''}))
 		states = set(states.split(','))
 		try:
 			states.remove('')
 		except:
 			pass
-		termin_states = form.terminating_states.data.translate(str.maketrans({'\n':'', '\t':'', ' ':''}))
+		termin_states = termin_states.translate(str.maketrans({'\n':'', '\t':'', ' ':''}))
 		termin_states = set(termin_states.split(','))
 		try:
 			termin_states.remove('')
 		except:
 			pass
-		start_state = form.start_state.data
-		trans_funcs = form.trans_funcs.data
-		blank_symbol = form.blank_symbol.data
-		tape_symbols = form.tape_symbols.data
 		# 目前不使用blank_symbol和tape_symbol
-		tape = form.tape.data
-		app.logger.info("trans_funcs is " + str(trans_funcs) )
+		app.logger.info("trans_funcs is " + trans_funcs )
 		try:
 			tm = TuringMachine(description, states, start_state, termin_states, trans_funcs, tape=tape)
 		except TMConstructionError as e:
@@ -79,6 +100,13 @@ def tape2html(tape: Tape, pos: int):
 	# if pos >= len(tape.string)-1:
 	# 	html_list.append('<td>{}</td>'.format(tape[len(tape.string)]))
 	return '<table class="tape"> {} </table>'.format(''.join(html_list))
+
+
+def allowed_file(filename:str):
+	return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def clean_str(s: str):
+	s.translate(str.maketrans({' ':'', '\n':''}))
 
 
 class TMForm(Form):
