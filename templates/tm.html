@@ -2,24 +2,50 @@
 {% from "_formhelpers.html" import render_tmform %}
 
 {% block content %}
+    <h1>Turing Machine</h1>
     <div>
-        <h5>The Tape</h5>
+        <h2>The Tape</h2>
+        <p> {{ next_trans_func }}</p>
         {{ tape_html | safe}}
     </div>
 
+
+
+
     <div>
-        <form action="/tm">
+        <form action="/">
             <button class="btn btn-default" type="submit">Step Forward</button>
         </form>
     </div>
 
-
-    <div>
-        {{ render_tmform(form) }}
+    <div class="row">
+        <div class="col-xs-4">
+            <table class="table">
+                <caption><strong>current TM</strong></caption>
+                   <thead>
+                      <tr>
+                         <th>attribute</th>
+                         <th>content</th>
+                      </tr>
+                   </thead>
+                   <tbody>
+                      <tr>
+                         <td>Description</td>
+                         <td>{{ current_tm.description }}</td>
+                      </tr>
+                      <tr>
+                         <td>Trans funcs</td>
+                         <td>{{ current_tm.transform_funcs_raw_string }}</td>
+                      </tr>
+                   </tbody>
+            </table>
+        </div>
+        <div class="col-xs-6 col-xs-offset-1">
+            <div>
+                {{ render_tmform(form) }}
+            </div>
+        </div>
     </div>
-
-
-
 
 
 

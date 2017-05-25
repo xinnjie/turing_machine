@@ -27,16 +27,44 @@ class TuringMachine:
 		self.terminate_states = terminating_states
 		self.transform_funcs_raw_string = transforming_funcs_string
 		self.blank_symbol = blank_symbol
-		self.tape_symbols = tape_symbols
 		self.input_letters = input_letters
 		self.tape = tape
+		self.tape_symbols = tape_symbols
 		self.current_state = start_state
-
-		self.func_pattern = self.__class__.default_func_pattern
+		self.func_pattern = TuringMachine.default_func_pattern
+		self.transform_funcs = self.generate_transforming_funcs(self.transform_funcs_raw_string)
 
 	@property
-	def current_tape_pos(self):
-		return (self.tape, self.position)
+	def states(self):
+		try:
+			return self._states
+		except AttributeError:
+			self._tape = None
+		return self._states
+
+	@states.setter
+	def states(self, value: set):
+		if not value:
+			raise TMConstructionError('states must be given')
+		if not isinstance(value, set):
+			raise TypeError('states should be type of '+str(type(set()))+' not ' + str(type(value)) )
+		self._states = value
+
+	@property
+	def start_state(self):
+		try:
+			return self._start_state
+		except AttributeError:
+			self._start_state = None
+		return self._start_state
+
+	@start_state.setter
+	def start_state(self, value: str):
+		if not value:
+			raise TMConstructionError('start_state must be given')
+		if not value in self.states:
+			raise TMConstructionError('start_state ' + value +' not in states')
+		self._start_state = value
 
 	@property
 	def tape(self):
@@ -50,15 +78,12 @@ class TuringMachine:
 	def tape(self, value: str):
 		if not value:
 			return
+		if not isinstance(value, str):
+			raise TypeError('value should be type of str not ' + str(type(value)))
 		if self.tape_symbols:
 			for letter in value:
 				if letter not in self.tape_symbols:
 					raise TMConstructionError('illegal input tape ' + letter + ' not allowed')
-		else:
-			tape_symbols = set()
-			for letter in value:
-				tape_symbols.add(letter)
-				self.tape_symbols = tape_symbols
 		self._tape = Tape(value)
 
 	@property
@@ -70,8 +95,20 @@ class TuringMachine:
 		return self._tape_symbols
 
 	@tape_symbols.setter
-	def tape_symbols(self, value):
-		self._tape_symbols = value
+	def tape_symbols(self, value:set or str or None):
+		if value is None:
+			if self.tape:
+				self._tape_symbols = set(str(self.tape))
+				return
+			else:
+				raise TMConstructionError('either tape symbols or tape should be seted')
+		if isinstance(value, set):
+			self._tape_symbols = value
+			return
+		if isinstance(value, str):
+			self._tape_symbols = set(str)
+			return
+		raise TypeError('tape_symbols should be str or set or None')
 
 	@property
 	def position(self):
@@ -83,9 +120,30 @@ class TuringMachine:
 
 	@position.setter
 	def position(self, value: int):
+		if not isinstance(value, int):
+			raise TypeError('value should be type of ' + str(type(0)) + ' not ' + str(type(value)))
 		if value < 0:  # todo 为方便起见，有可能到达-1，指向的字母是 空，这里再做打算
 			raise IndexError("position index out of range, position can not be " + str(value))
 		self._position = value
+
+
+	@property
+	def current_tape_pos(self):
+		return (self.tape, self.position)
+
+	@property
+	def next_transforming_func(self) -> str:
+		tape = self.tape
+		if self.current_state in self.terminate_states:
+			raise HaltException
+		read_letter = tape[self.position]
+		# tuple(starte_state, read_letter) -> tuple(to_state, write_letter, direction)
+		try:
+			next_step = self.transform_funcs[(self.current_state, read_letter)]
+		except KeyError:
+			raise BreakDownException('this func not exist')
+		return  '({}, {}) --> ({}, {}, {})'.format(self.current_state, read_letter, *next_step)
+
 
 	def generate_transforming_funcs(self, funcs: str):
 		# 去掉空格
@@ -110,15 +168,6 @@ class TuringMachine:
 		except ValueError:
 			pass
 		return res
-
-	@property
-	def transform_funcs(self) -> dict:
-		try:
-			return self._transform_funcs
-		except AttributeError:
-			self._transform_funcs = self.generate_transforming_funcs(self.transform_funcs_raw_string)
-
-		return self._transform_funcs
 
 	def _step_forward(self):
 		tape = self.tape
@@ -198,7 +247,8 @@ class Tape:
 		self.blank_symbol = blank_symbol
 
 	def __len__(self):
-		return '∞'
+		import math
+		return math.inf
 
 	def __getitem__(self, item):
 		if isinstance(item, slice):
@@ -238,7 +288,10 @@ class Tape:
 		self.string = ''.join(l)
 
 	def __str__(self):
-		return self.string.__str__()
+		return self.string.__str__() + 'B...'
+
+	def __bool__(self):
+		return bool(self.string)
 
 
 class TMConstructionError(Exception):
@@ -290,8 +343,10 @@ class MachineTest(unittest.TestCase):
 						 f(q1, 1) = (q2, 1, R);
 						 f(q2, 0) = (q2, 0, R);
 						 f(q2, 1) = (q3, 1, R)'''
+		tape_symbols = {'1', '0'}
 
-		self.tm = TuringMachine('match three 1s or more', states, start_state, ter_states, trans_funcs)
+		self.tm = TuringMachine('match three 1s or more',
+		                        states, start_state, ter_states, trans_funcs, tape_symbols=tape_symbols)
 
 	def test_match_function(self):  # matching functionality
 		result = self.tm.func_pattern.match('f(q0,0)=(q0,0,R)')
@@ -321,5 +376,4 @@ class MachineTest(unittest.TestCase):
 	def test_step_forwards(self):
 		self.tm.tape = '11001101'
 		rs = self.tm.step_forward(5)
-		for tape in rs:
-			print(tape)
+

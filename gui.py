@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, flash, redirect
-from wtforms import Form, StringField
+from wtforms import Form, StringField, TextAreaField, validators
 
-from turing_machine import TuringMachine, Tape, TMConstructionError
+from turing_machine import TuringMachine, Tape, TMConstructionError, HaltException, BreakDownException
 
 app = Flask(__name__)
 app.secret_key = 'hello'
@@ -18,16 +18,8 @@ termin_states = {'q1'}
 
 tm = TuringMachine('modify all 0 to 1', states, start_state, termin_states, trans_funcs, tape='0010101')
 
-g = 0
-
-@app.route('/')
-def hello_world():
-	global  g
-	g += 1
-	return 'Hello World!' + str(g)
-
-
 @app.route('/tm', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def tm_gui():
 	# todo 目标，表格信息填写与图灵机运行分离，可运行多个图灵机
 	form = TMForm(request.form)
@@ -35,7 +27,15 @@ def tm_gui():
 		global tm
 		tape_html = tape2html(*tm.current_tape_pos)
 		tm.step_forward()
-		return render_template('tm.html', tape_html=tape_html, form=form)
+		try:
+			next_trans_func = tm.next_transforming_func
+		except HaltException:
+			next_trans_func = 'turing machine halted'
+			flash('turing machine halted', 'Info')
+		except BreakDownException:
+			next_trans_func = 'next transforming func not exist'
+			flash('next transforming func not exist', 'Error')
+		return render_template('tm.html', tape_html=tape_html, form=form, next_trans_func=next_trans_func, current_tm=tm)
 	if request.method == 'POST':
 		description = form.description.data
 		states = form.states.data.translate(str.maketrans({'\n':'', '\t':'', ' ':''}))
@@ -61,36 +61,37 @@ def tm_gui():
 			tm = TuringMachine(description, states, start_state, termin_states, trans_funcs, tape=tape)
 		except TMConstructionError as e:
 			flash('fail to construct the given turing machine, because: '+ str(e), 'error')
-			app.logger.error("trans_funcs may not be legal: " + trans_funcs)
+			app.logger.error('fail to construct the given sutring machine, because '+str(e))
 			return redirect('/tm')
 		flash('succeed to construct the given turing machine and switch', 'info')
 		return redirect('/tm')
-	# todo 表格一直显示默认值
 
 
 def tape2html(tape: Tape, pos: int):
 	html_list = []
-	i = 0
-	for letter in tape.string:
+	for i in range(max(len(tape.string), pos+1)):
 		if i == pos:
-			html_list.append('<td class="current_pos">{}</td>'.format(letter))
+			html_list.append('<td class="current_pos">{}</td>'.format(tape[i]))
 		else:
-			html_list.append('<td>{}</td>'.format(letter))
-		i += 1
+			html_list.append('<td>{}</td>'.format(tape[i]))
+
+	# if pos is at the last of the tape string add extra blank symbol to it
+	# if pos >= len(tape.string)-1:
+	# 	html_list.append('<td>{}</td>'.format(tape[len(tape.string)]))
 	return '<table class="tape"> {} </table>'.format(''.join(html_list))
 
 
 class TMForm(Form):
-	description = StringField('Description', default='modify all 1s to 0')
-	states = StringField('Allowable States', default='q0, q1')
-	terminating_states = StringField('Terminating States', default='q1')
-	start_state = StringField('Start State', default='q0')
-	trans_funcs = StringField('Transforming Functions',
-	                          default='f(q0, 1) = (q0, 0, R); f(q0, 0) = (q0, 0, R); f(q0, B) = (q1, B, S)')
-	blank_symbol = StringField('Blank Symbol', default='B')
-	tape_symbols = StringField('Tape Symbols', default='0,1')
+	description = StringField('Description')
+	states = StringField('Allowable States', [validators.input_required])
+	terminating_states = StringField('Terminating States', [validators.input_required])
+	start_state = StringField('Start State', [validators.input_required])
+	blank_symbol = StringField('Blank Symbol')
+	tape_symbols = StringField('Tape Symbols')
 	# input_letters = StringField('')
-	tape = StringField('Tape', default='111010101101101')
+	tape = StringField('Tape')
+	trans_funcs = TextAreaField('Transforming Functions',[validators.input_required])
+
 
 if __name__ == '__main__':
 	app.run(debug=True)
