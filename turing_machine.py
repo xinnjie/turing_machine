@@ -28,7 +28,7 @@ class TuringMachine:
 		self.transform_funcs_raw_string = transforming_funcs_string
 		self.blank_symbol = blank_symbol
 		self.input_letters = input_letters
-		self.tape = tape
+		self.tape = self.original_tape = tape
 		self.tape_symbols = tape_symbols
 		self.current_state = start_state
 		self.func_pattern = TuringMachine.default_func_pattern
@@ -85,6 +85,7 @@ class TuringMachine:
 				if letter not in self.tape_symbols:
 					raise TMConstructionError('illegal input tape ' + letter + ' not allowed')
 		self._tape = Tape(value)
+		self.original_tape = value
 
 	@property
 	def tape_symbols(self):
@@ -161,7 +162,7 @@ class TuringMachine:
 
 	@classmethod
 	def clean_func_str(cls, funcs_str: str) -> list:
-		after_clean = funcs_str.translate(str.maketrans({'\t': '', '\n': '', ' ': ''}))  # 删去多余的空白符
+		after_clean = funcs_str.translate(str.maketrans({'\t': '', '\n': '', ' ': '', '\r':''}))  # 删去多余的空白符
 		res = after_clean.split(';')
 		try:
 			res.remove('')
@@ -182,12 +183,18 @@ class TuringMachine:
 		self.current_state, tape[self.position], direction = next_step
 		self.position = self.position + self.__class__.direction[direction]
 
-	def step_forward(self, steps=1) -> list:
+	def step_forward(self, steps=0) -> list:
 		"""
 		
 		:param steps: the steps you want to run
 		:return: list of string, the string represent the tape
 		"""
+		if steps == 0:
+			try:
+				self._step_forward()
+			except HaltException:
+				pass
+			return
 		import copy
 		process = []
 		try:
@@ -205,6 +212,10 @@ class TuringMachine:
 		return process
 
 	def run(self) -> bool:
+		"""
+		simply step forward 
+		:return: 
+		"""
 		try:
 			for _ in range(1000):
 				self._step_forward()
@@ -288,7 +299,7 @@ class Tape:
 		self.string = ''.join(l)
 
 	def __str__(self):
-		return self.string.__str__() + 'B...'
+		return self.string.__str__() + 'B'
 
 	def __bool__(self):
 		return bool(self.string)

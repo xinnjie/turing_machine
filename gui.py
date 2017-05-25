@@ -11,10 +11,7 @@ ALLOWED_EXTENSIONS = {'txt'}
 
 # 由于这个应用作为一个演示图灵机的工具，并没有并发的需求，所以我在这里使用了指向一个图灵机的全局变量
 # tm初始是演示用图灵机，把纸带上的所以0改成1
-trans_funcs = '''f(q0, 0) = (q0, 1, R);
-				f(q0, 1) = (q0, 1, R);
-				f(q0, B) = (q1, B, S);
-				'''
+trans_funcs = 'f(q0, 0) = (q0, 1, R);\n f(q0, 1) = (q0, 1, R);\nf(q0, B) = (q1, B, S);'
 states = {'q0', 'q1'}
 start_state = 'q0'
 termin_states = {'q1'}
@@ -38,7 +35,9 @@ def tm_gui():
 		except BreakDownException:
 			next_trans_func = 'next transforming func not exist'
 			flash('next transforming func not exist', 'Error')
-		return render_template('tm.html', tape_html=tape_html, form=form, next_trans_func=next_trans_func, current_tm=tm)
+		data = {'states': set2str(tm.states), 'terminate_states':set2str(tm.terminate_states) , 'tape_symbols':set2str(tm.tape_symbols)}
+
+		return render_template('tm.html', tape_html=tape_html, form=form, next_trans_func=next_trans_func, current_tm=tm, data=data)
 	if request.method == 'POST':
 		if 'new_tm' in request.files:
 			file = request.files['new_tm']
@@ -82,10 +81,17 @@ def tm_gui():
 			tm = TuringMachine(description, states, start_state, termin_states, trans_funcs, tape=tape)
 		except TMConstructionError as e:
 			flash('fail to construct the given turing machine, because: '+ str(e), 'error')
-			app.logger.error('fail to construct the given sutring machine, because '+str(e))
+			app.logger.error('fail to construct the given tutring machine, because '+str(e))
 			return redirect('/tm')
 		flash('succeed to construct the given turing machine and switch', 'info')
 		return redirect('/tm')
+
+@app.route('/run')
+def run():
+	if not tm.run():
+		flash('this machine may not stop(has steped forward 1000 times)', 'Info')
+	return redirect('/')
+
 
 
 def tape2html(tape: Tape, pos: int):
@@ -102,12 +108,25 @@ def tape2html(tape: Tape, pos: int):
 	return '<table class="tape"> {} </table>'.format(''.join(html_list))
 
 
+# helpers
 def allowed_file(filename:str):
 	return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def clean_str(s: str):
 	s.translate(str.maketrans({' ':'', '\n':''}))
 
+
+def set2str(s):
+	res = ''
+	i = 0
+	for item in s:
+		if i == len(s)-1:
+			res += item
+		else:
+			res += item + ', '
+		i += 1
+	return res
 
 class TMForm(Form):
 	description = StringField('Description')

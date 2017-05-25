@@ -37,7 +37,7 @@
 
 
 {% macro render_tmform(tmform) %}
-<form class="form-horizontal" role="form" method="post" action="/tm">
+<form class="form-horizontal" role="form" method="post" action="/">
         {{ render_field(tmform.description) }}
 	    {{ render_field(tmform.states) }}
 	    {{ render_field(tmform.terminating_states) }}
