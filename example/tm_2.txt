@@ -1,0 +1,6 @@
+y = log2x + 1
+q0,q1,q2,q3,q4,q5
+q0
+q5
+f(q0, c) = (q0, c , R);f(q0, a ) = (q1,c, R); f(q0,b) = (q4, b, L);f(q1,c) = (q1,c,  R);f(q1, b) = (q1,b, R);f(q1, a) = (q2, a, R);f(q1, B) = (q3, b, L);f(q2, c) = (q2,c, R);f(q2,b) = (q2,b, R);f(q2, a) = (q1, c, R);f(q2, B) = (q3,b, L);f(q3, b) = (q3,b, L);f(q3,c) = (q3,c, L);f(q3,a) = (q3,a, L);f(q3, B) = (q0,B, R);f(q4, c) = (q4,B, L); f(q4, B) = (q5, B, R)
+aaaaaaaaa
