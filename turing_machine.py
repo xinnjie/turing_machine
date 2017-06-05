@@ -123,7 +123,7 @@ class TuringMachine:
 	def position(self, value: int):
 		if not isinstance(value, int):
 			raise TypeError('value should be type of ' + str(type(0)) + ' not ' + str(type(value)))
-		if value < 0:  # todo 为方便起见，有可能到达-1，指向的字母是 空，这里再做打算
+		if value < -1:  # todo 为方便起见，有可能到达-1，指向的字母是 空，这里再做打算
 			raise IndexError("position index out of range, position can not be " + str(value))
 		self._position = value
 
@@ -179,7 +179,7 @@ class TuringMachine:
 		try:
 			next_step = self.transform_funcs[(self.current_state, read_letter)]
 		except KeyError:
-			raise BreakDownException('func')
+			raise BreakDownException('func not exist: ' + 'f({}, {})'.format(self.current_state, read_letter))
 		self.current_state, tape[self.position], direction = next_step
 		self.position = self.position + self.__class__.direction[direction]
 
@@ -285,7 +285,9 @@ class Tape:
 		if not isinstance(value, str) and len(value) != 1:
 			raise TypeError(
 				'the type of value is supposed to be str and the length is supposed to be 1, not ' + str(value))
-		if key < 0:
+		if key == -1:
+			return
+		if key < -1:
 			raise TypeError('key should be > 0, not ' + str(key))
 		if 0 <= key < len(self.string):
 			l = list(self.string)

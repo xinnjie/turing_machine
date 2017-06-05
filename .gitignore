@@ -10,3 +10,6 @@
 .idea/vcs.xml
 
 .idea/workspace.xml
+__pycache__/gui.cpython-35.pyc
+__pycache__/gui.cpython-36.pyc
+__pycache__/turing_machine.cpython-35.pyc

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, redirect
+from flask import Flask, render_template, request, flash, redirect, url_for
 from wtforms import Form, StringField, TextAreaField, validators
 
 from turing_machine import TuringMachine, Tape, TMConstructionError, HaltException, BreakDownException
@@ -18,7 +18,7 @@ termin_states = {'q1'}
 
 tm = TuringMachine('modify all 0 to 1', states, start_state, termin_states, trans_funcs, tape='0010101')
 
-@app.route('/tm', methods=['GET', 'POST'])
+
 @app.route('/', methods=['GET', 'POST'])
 def tm_gui():
 	# todo 目标，表格信息填写与图灵机运行分离，可运行多个图灵机
@@ -26,7 +26,11 @@ def tm_gui():
 	if request.method == 'GET':
 		global tm
 		tape_html = tape2html(*tm.current_tape_pos)
-		tm.step_forward()
+		try:
+			tm.step_forward()
+		except BreakDownException as e:
+			flash(str(e), 'Error')
+			return redirect('/')
 		try:
 			next_trans_func = tm.next_transforming_func
 		except HaltException:
@@ -51,6 +55,10 @@ def tm_gui():
 				except IndexError as e:
 					app.logger.error(str(e))
 					flash('the uploaded TM do not fit', 'Error')
+					return redirect('/')
+				except ValueError as e:
+					app.logger.error(str(e))
+					flash("the file doesn't match the format   "+str(e), 'Error')
 					return redirect('/')
 		# if there is no file uploaded, then check the form
 		else:
@@ -82,12 +90,12 @@ def tm_gui():
 		except TMConstructionError as e:
 			flash('fail to construct the given turing machine, because: '+ str(e), 'error')
 			app.logger.error('fail to construct the given tutring machine, because '+str(e))
-			return redirect('/tm')
+			return redirect('/')
 		flash('succeed to construct the given turing machine and switch', 'info')
-		return redirect('/tm')
+		return redirect('/')
 
 @app.route('/run')
-def run():
+def tm_run():
 	if not tm.run():
 		flash('this machine may not stop(has steped forward 1000 times)', 'Info')
 	return redirect('/')
@@ -128,6 +136,7 @@ def set2str(s):
 		i += 1
 	return res
 
+
 class TMForm(Form):
 	description = StringField('Description')
 	states = StringField('Allowable States', [validators.input_required])
@@ -138,7 +147,3 @@ class TMForm(Form):
 	# input_letters = StringField('')
 	tape = StringField('Tape')
 	trans_funcs = TextAreaField('Transforming Functions',[validators.input_required])
-
-
-if __name__ == '__main__':
-	app.run(debug=True)
